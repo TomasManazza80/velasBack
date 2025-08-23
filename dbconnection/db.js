@@ -7,13 +7,13 @@ const isLocal = process.env.DB_HOST === 'localhost' ||
 
 // Configuración adaptable para diferentes entornos
 const sequelizeConfig = {
-  database: process.env.DB_NAME,
+  database: process.env.DB_NAME || process.env.DB_DATABASE, // Agregué DB_DATABASE como alternativa
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   dialect: 'postgres',
-  logging: msg => console.log(msg), // Solo para depuración
+  logging: msg => console.log(msg),
   pool: {
     max: 5,
     min: 0,
@@ -44,7 +44,35 @@ if (!isLocal) {
   };
 }
 
-const sequelize = new Sequelize(process.env.DATABASE_URL || sequelizeConfig);
+// 🔥 CORRECCIÓN IMPORTANTE: No uses process.env.DATABASE_URL OR sequelizeConfig
+// En su lugar, crea la instancia basada en si tenemos DATABASE_URL o no
+let sequelize;
+
+if (process.env.DATABASE_URL) {
+  // Si tenemos DATABASE_URL, úsala pero fusiona con nuestra configuración SSL
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    logging: msg => console.log(msg),
+    dialectOptions: !isLocal ? {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      },
+      keepAlive: true,
+      statement_timeout: 10000,
+      connectionTimeoutMillis: 10000
+    } : {},
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
+  });
+} else {
+  // Si no hay DATABASE_URL, usa la configuración individual
+  sequelize = new Sequelize(sequelizeConfig);
+}
 
 // Verificación mejorada de conexión con mensajes específicos por entorno
 (async () => {
