@@ -47,7 +47,7 @@ const productService = {
     }
   },
 
-  async updateProduct(id, nombre, precio, marca, categoria, cantidad, talle, imagenes, descripcion) {
+  async updateProduct(id, nombre, precio, descripcion, categoria, cantidad, talle, imagenes) {
     try {
       const product = await model.product.findByPk(id);
       if (!product) {
@@ -56,12 +56,12 @@ const productService = {
       await product.update({
         nombre,
         precio,
-        marca,
+        descripcion,
         categoria,
         cantidad,
         talle,
         imagenes,
-        descripcion
+  
       });
       return product;
     } catch (error) {
