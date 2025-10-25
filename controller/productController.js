@@ -39,8 +39,8 @@ const productController = {
   async updateProduct(req, res) {
     try {
       const id = req.params.id;
-      const { nombre, precio, descripcion, categoria, cantidad, talle, imagenes } = req.body;
-      const product = await productService.updateProduct(id, nombre, precio, descripcion, categoria, cantidad, talle, imagenes);
+      const { nombre, precio, marca, descripcion, categoria, cantidad, talle, imagenes } = req.body;
+      const product = await productService.updateProduct(id, nombre, precio, descripcion, marca, categoria, cantidad, talle, imagenes);
       res.status(200).json(product);
     } catch (error) {
       res.status(500).json({ message: 'Error al actualizar producto' });
