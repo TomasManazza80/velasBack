@@ -1,9 +1,8 @@
-// main.js - VERSIÓN FINAL ESTABLE
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcodeTerminal = require('qrcode-terminal');
 
 const MY_CHAT_ID = '5493425937358@c.us'; 
-const MAX_ATTEMPTS = 2; // Máximo de QRs generados
+const MAX_ATTEMPTS = 2; 
 let qrAttempts = 0;
 
 const client = new Client({
@@ -27,66 +26,53 @@ const inicializarWhatsApp = (io) => {
         try {
             await client.destroy();
         } catch (e) {
-            console.log("El cliente ya estaba cerrado o no iniciado.");
+            console.log("Aviso: El cliente ya estaba cerrado.");
         }
-        client.initialize().catch(err => console.error("Error al re-inicializar:", err));
+        // Pequeño delay antes de inicializar para asegurar que el proceso anterior murió
+        setTimeout(() => {
+            client.initialize().catch(err => console.error("Error al re-inicializar:", err));
+        }, 2000);
     };
 
-    // Manejo de conexión de Socket
-    // Usamos removeAllListeners para evitar que se acumulen funciones al reconectar
-    io.removeAllListeners('connection'); 
+    // Gestión Global de Sockets para evitar duplicados
     io.on('connection', (socket) => {
-        console.log('👤 Cliente conectado al panel de control');
+        console.log('👤 Cliente conectado al panel');
         
         socket.on('whatsapp-restart', () => {
             resetearConexion();
         });
+
+        // Al conectar, enviamos el estado actual para que el front no se quede en "loading"
+        if (qrAttempts >= MAX_ATTEMPTS) {
+            socket.emit('whatsapp-status', 'timeout');
+        }
     });
 
-    client.on('qr', async (qr) => {
+    client.on('qr', (qr) => {
         qrAttempts++;
-        
         if (qrAttempts <= MAX_ATTEMPTS) {
-            console.log(`📤 [Socket] Enviando QR ${qrAttempts}/${MAX_ATTEMPTS}`);
+            console.log(`📤 Enviando QR ${qrAttempts}/${MAX_ATTEMPTS}`);
             qrcodeTerminal.generate(qr, { small: true });
             io.emit('whatsapp-qr', qr);
         } else {
-            console.log('🛑 [WhatsApp] Límite de QRs alcanzado. Deteniendo...');
+            console.log('🛑 Límite alcanzado.');
             io.emit('whatsapp-status', 'timeout');
-            try {
-                await client.destroy();
-            } catch (err) {
-                console.error("Error al destruir cliente:", err);
-            }
+            client.destroy().catch(err => console.error("Error al destruir:", err));
         }
     });
 
     client.on('ready', () => {
-        console.log('🟢 [WhatsApp] ¡Cliente conectado!');
+        console.log('🟢 Cliente conectado!');
         qrAttempts = 0; 
         io.emit('whatsapp-status', 'connected');
     });
 
-    client.on('disconnected', async (reason) => {
-        console.log('❌ [WhatsApp] Desconectado:', reason);
+    client.on('disconnected', (reason) => {
+        console.log('❌ Sesión cerrada:', reason);
         io.emit('whatsapp-status', 'disconnected');
-        // No reiniciamos automáticamente si ya alcanzamos el límite
     });
 
-    console.log('🚀 [WhatsApp] Inicializando cliente...');
     client.initialize().catch(err => console.error("Error inicialización:", err));
 };
 
-const enviarPedido = async (datos) => {
-    // ... (Tu función de enviarPedido se mantiene igual que antes)
-    const { nombre, celular, totalPagado } = datos; // ejemplo simplificado
-    try {
-        const mensaje = `🛍️ Nuevo pedido de ${nombre}...`; 
-        return await client.sendMessage(MY_CHAT_ID, mensaje);
-    } catch (error) {
-        console.error("Error enviando:", error);
-        throw error;
-    }
-};
-
-module.exports = { enviarPedido, inicializarWhatsApp };
+module.exports = { inicializarWhatsApp };
