@@ -1,13 +1,11 @@
-// main.js - VERSIÓN COMPLETA PARA PRODUCCIÓN
+// main.js - VERSIÓN FINAL CON REINICIO
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcodeTerminal = require('qrcode-terminal');
 
 const MY_CHAT_ID = '5493425937358@c.us'; 
-const TEST_MESSAGE = 'Hola, esta es la prueba para LU ecommerce.';
 
-// Configuración del cliente con flags para evitar errores en servidores Linux/Producción
 const client = new Client({
-    authStrategy: new LocalAuth(), // Mantiene la sesión iniciada
+    authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
         args: [
@@ -23,74 +21,85 @@ const client = new Client({
     }
 });
 
-/**
- * Inicializa los eventos de WhatsApp y la conexión con Socket.io
- * @param {Object} io - Instancia de Socket.io pasada desde app.js
- */
+let qrAttempts = 0;
+const MAX_ATTEMPTS = 2;
+
 const inicializarWhatsApp = (io) => {
 
-    // Evento cuando se necesita escanear QR
-    client.on('qr', (qr) => {
-        // 1. Mostrar en la terminal del servidor (como respaldo)
-        qrcodeTerminal.generate(qr, { small: true });
-        
-        // 2. Enviar el código al frontend en tiempo real
-        console.log('📤 [Socket] Enviando nuevo QR al frontend...');
-        io.emit('whatsapp-qr', qr);
-    });
-
-    // Evento cuando el cliente está listo
-    client.on('ready', () => {
-        console.log('🟢 [WhatsApp] ¡Cliente listo y conectado!');
-        io.emit('whatsapp-status', 'connected');
-        
-        // Mensaje opcional de log
-        // client.sendMessage(MY_CHAT_ID, TEST_MESSAGE);
-    });
-
-    // Evento cuando la sesión se cierra o falla
-    client.on('disconnected', async (reason) => {
-        console.log('❌ [WhatsApp] Sesión cerrada o desconectada:', reason);
-        io.emit('whatsapp-status', 'disconnected');
-        
-        // IMPORTANTE: Reiniciar el cliente para que genere un nuevo QR automáticamente
-        console.log('🔄 [WhatsApp] Reiniciando cliente para generar nuevo código...');
+    // Función para resetear el cliente y el contador
+    const resetearConexion = async () => {
+        console.log('🔄 [WhatsApp] Reiniciando contador y cliente por solicitud del usuario...');
+        qrAttempts = 0;
         try {
             await client.destroy();
-            client.initialize();
-        } catch (error) {
-            console.error('Error al intentar reiniciar el cliente:', error);
+        } catch (e) {
+            console.log("Aviso: El cliente ya estaba detenido.");
+        }
+        client.initialize().catch(err => console.error("Error al re-inicializar:", err));
+    };
+
+    // Escuchar solicitud de reinicio desde el frontend
+    io.on('connection', (socket) => {
+        socket.on('whatsapp-restart', () => {
+            resetearConexion();
+        });
+    });
+
+    client.on('qr', async (qr) => {
+        qrAttempts++;
+        
+        if (qrAttempts <= MAX_ATTEMPTS) {
+            console.log(`📤 [Socket] Enviando QR intento ${qrAttempts}/${MAX_ATTEMPTS}`);
+            qrcodeTerminal.generate(qr, { small: true });
+            io.emit('whatsapp-qr', qr);
+        } else {
+            console.log('🛑 [WhatsApp] Límite de QRs alcanzado. Deteniendo cliente.');
+            io.emit('whatsapp-status', 'timeout');
+            
+            try {
+                await client.destroy();
+            } catch (err) {
+                console.error("Error al destruir cliente:", err);
+            }
         }
     });
 
-    // Evento de autenticación fallida
+    client.on('ready', () => {
+        console.log('🟢 [WhatsApp] ¡Cliente listo y conectado!');
+        qrAttempts = 0; 
+        io.emit('whatsapp-status', 'connected');
+    });
+
+    client.on('disconnected', async (reason) => {
+        console.log('❌ [WhatsApp] Sesión cerrada:', reason);
+        io.emit('whatsapp-status', 'disconnected');
+        
+        if (qrAttempts < MAX_ATTEMPTS) {
+            try {
+                await client.destroy();
+                client.initialize();
+            } catch (error) {
+                console.error('Error al reiniciar:', error);
+            }
+        }
+    });
+
     client.on('auth_failure', msg => {
         console.error('❌ [WhatsApp] Error de autenticación:', msg);
         io.emit('whatsapp-status', 'auth_failure');
     });
 
-    // Inicializar el proceso
     console.log('🚀 [WhatsApp] Inicializando cliente...');
     client.initialize().catch(err => console.error("Error al inicializar:", err));
 };
 
-/**
- * Envía el pedido formateado a WhatsApp
- */
 const enviarPedido = async (datos) => {
     const {
-        nombre = "-",
-        celular = "-",
-        opcionEnvio = "-",
-        calleDireccion = "-",
-        ciudad = "-",
-        provincia = "-",
-        costoEnvio = "0",
-        totalPagado = "0",
-        productos = [] 
+        nombre = "-", celular = "-", opcionEnvio = "-",
+        calleDireccion = "-", ciudad = "-", provincia = "-",
+        costoEnvio = "0", totalPagado = "0", productos = [] 
     } = datos;
 
-    // Formatear lista de productos
     let listaProductosTexto = "";
     if (productos && productos.length > 0) {
         productos.forEach((p, index) => {
@@ -123,8 +132,4 @@ const enviarPedido = async (datos) => {
     }
 };
 
-// Exportación para ser usado en app.js y en las rutas
-module.exports = { 
-    enviarPedido, 
-    inicializarWhatsApp 
-};
+module.exports = { enviarPedido, inicializarWhatsApp };
