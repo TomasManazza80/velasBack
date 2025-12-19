@@ -6,13 +6,13 @@
 var app = require("../app");
 var debug = require("debug")("backend:server");
 var http = require("http");
-const { Server } = require("socket.io"); // Importamos Socket.io [cite: 2]
-const { inicializarWhatsApp } = require("../main"); // Importamos tu servicio de WhatsApp [cite: 2]
+const { Server } = require("socket.io"); 
+const { inicializarWhatsApp } = require("../main"); 
 
 /**
  * Get port from environment and store in Express.
  */
-var port = normalizePort(process.env.PORT || "3000"); // Render usará process.env.PORT 
+var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
 var { Sequelize } = require("../models/index");
@@ -24,26 +24,25 @@ var server = http.createServer(app);
 
 /**
  * Create Socket.io server.
- * Configuramos CORS y transportes para producción.
  */
 const io = new Server(server, {
   cors: {
-    origin: "*", // Permite conexiones desde tu frontend 
+    origin: "*", 
     methods: ["GET", "POST"]
   },
-  transports: ['websocket', 'polling'] // Mejora la estabilidad de la conexión
+  transports: ['websocket', 'polling']
 });
 
 /**
- * INICIALIZACIÓN DE SERVICIOS
- * Primero arrancamos WhatsApp para que el QR se genere lo antes posible.
+ * INICIALIZACIÓN DE WHATSAPP
+ * Lo movimos fuera de Sequelize.sync para que arranque de inmediato.
  */
 console.log("-------------------------------------------");
 console.log("🚀 [System] Iniciando servicio de WhatsApp...");
-inicializarWhatsApp(io); // Le pasamos la instancia de 'io' 
+inicializarWhatsApp(io); 
 
 /**
- * Sincronización de Base de Datos y arranque del servidor.
+ * Listen on provided port, on all network interfaces.
  */
 Sequelize.sync()
   .then(() => {
@@ -55,37 +54,23 @@ Sequelize.sync()
   })
   .catch((error) => {
     console.error("❌ [Database] Error al sincronizar la base de datos:", error);
-    // Aunque la DB falle, el servidor intenta mantenerse arriba para el socket
-    server.listen(port); 
+    // Intentamos arrancar el servidor de todos modos para que el Socket funcione
+    server.listen(port);
   });
 
 /**
- * Normalize a port into a number, string, or false.
+ * Funciones de soporte (normalizePort, onError, onListening)
  */
 function normalizePort(val) {
   var port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    return val;
-  }
-
-  if (port >= 0) {
-    return port;
-  }
-
+  if (isNaN(port)) return val;
+  if (port >= 0) return port;
   return false;
 }
 
-/**
- * Event listener for HTTP server "error" event.
- */
 function onError(error) {
-  if (error.syscall !== "listen") {
-    throw error;
-  }
-
+  if (error.syscall !== "listen") throw error;
   var bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-
   switch (error.code) {
     case "EACCES":
       console.error(bind + " requiere privilegios elevados.");
@@ -100,13 +85,9 @@ function onError(error) {
   }
 }
 
-/**
- * Event listener for HTTP server "listening" event.
- */
 function onListening() {
   var addr = server.address();
   var bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
-  debug("Listening on " + bind);
   console.log(`📡 [Server] Servidor escuchando en ${bind}`);
   console.log("-------------------------------------------");
 }
