@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: whatsapp-ecommerce
+    env: node
+    plan: free # O el plan que elijas
+    buildCommand: npm install
+    startCommand: node app.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.0.0

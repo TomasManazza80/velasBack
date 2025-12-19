@@ -3,16 +3,15 @@
 /**
  * Module dependencies.
  */
-
 var app = require("../app");
 var debug = require("debug")("backend:server");
 var http = require("http");
-
+const { Server } = require("socket.io"); // Importamos Socket.io
+const { inicializarWhatsApp } = require("../main"); // Importamos tu servicio de WhatsApp
 
 /**
  * Get port from environment and store in Express.
  */
-
 var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
@@ -21,26 +20,43 @@ var { Sequelize } = require("../models/index");
 /**
  * Create HTTP server.
  */
-
 var server = http.createServer(app);
+
+/**
+ * Create Socket.io server.
+ * Configuramos CORS para permitir que el frontend se conecte.
+ */
+const io = new Server(server, {
+  cors: {
+    origin: "*", // En producción, reemplaza "*" por la URL de tu frontend (ej: "https://tutienda.com")
+    methods: ["GET", "POST"]
+  }
+});
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 Sequelize.sync()
   .then(() => {
-    console.log("db sync");
+    console.log("-------------------------------------------");
+    console.log("🟢 [Database] Base de datos sincronizada.");
+
+    // INICIALIZACIÓN DE WHATSAPP
+    // Le pasamos la instancia de 'io' para que pueda emitir el QR
+    console.log("🚀 [System] Iniciando servicio de WhatsApp...");
+    inicializarWhatsApp(io);
+
     server.listen(port);
     server.on("error", onError);
     server.on("listening", onListening);
   })
   .catch((error) => {
-    console.log("error to sync ", error);
+    console.error("❌ [Database] Error al sincronizar la base de datos:", error);
   });
+
 /**
  * Normalize a port into a number, string, or false.
  */
-
 function normalizePort(val) {
   var port = parseInt(val, 10);
 
@@ -60,7 +76,6 @@ function normalizePort(val) {
 /**
  * Event listener for HTTP server "error" event.
  */
-
 function onError(error) {
   if (error.syscall !== "listen") {
     throw error;
@@ -71,11 +86,11 @@ function onError(error) {
   // handle specific listen errors with friendly messages
   switch (error.code) {
     case "EACCES":
-      console.error(bind + " requires elevated privileges");
+      console.error(bind + " requiere privilegios elevados.");
       process.exit(1);
       break;
     case "EADDRINUSE":
-      console.error(bind + " is already in use");
+      console.error(bind + " ya está en uso.");
       process.exit(1);
       break;
     default:
@@ -86,9 +101,10 @@ function onError(error) {
 /**
  * Event listener for HTTP server "listening" event.
  */
-
 function onListening() {
   var addr = server.address();
   var bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
   debug("Listening on " + bind);
+  console.log(`📡 [Server] Servidor escuchando en ${bind}`);
+  console.log("-------------------------------------------");
 }
