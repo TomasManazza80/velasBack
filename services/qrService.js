@@ -43,7 +43,7 @@ const init = async () => {
             // Manejo de QR
             if (qr) {
                 qrAttempts++;
-                if (qrAttempts > 2) {
+                if (qrAttempts > 5) {
                     console.log("⚠️ [WhatsApp] Límite de QR alcanzado.");
                     estado = 'qr_timeout';
                     ultimoQR = null;
