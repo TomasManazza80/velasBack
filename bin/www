@@ -6,8 +6,8 @@
 var app = require("../app");
 var debug = require("debug")("backend:server");
 var http = require("http");
-const { Server } = require("socket.io"); // Importamos Socket.io
-const { inicializarWhatsApp } = require("../main"); // Importamos tu servicio de WhatsApp
+const { Server } = require("socket.io"); 
+const { inicializarWhatsApp } = require("../main");
 
 /**
  * Get port from environment and store in Express.
@@ -23,26 +23,26 @@ var { Sequelize } = require("../models/index");
 var server = http.createServer(app);
 
 /**
- * Create Socket.io server.
- * Configuramos CORS para permitir que el frontend se conecte.
+ * Create Socket.io server con configuración de CORS y Transportes.
  */
 const io = new Server(server, {
   cors: {
-    origin: "*", // En producción, reemplaza "*" por la URL de tu frontend (ej: "https://tutienda.com")
+    origin: "*", 
     methods: ["GET", "POST"]
-  }
+  },
+  // Forzamos websocket para evitar el error 'xhr poll error' en producción
+  transports: ['websocket', 'polling']
 });
 
 /**
- * Listen on provided port, on all network interfaces.
+ * Listen on provided port.
  */
 Sequelize.sync()
   .then(() => {
     console.log("-------------------------------------------");
     console.log("🟢 [Database] Base de datos sincronizada.");
 
-    // INICIALIZACIÓN DE WHATSAPP
-    // Le pasamos la instancia de 'io' para que pueda emitir el QR
+    // INICIALIZACIÓN DE WHATSAPP pasándole la instancia de 'io' [cite: 8]
     console.log("🚀 [System] Iniciando servicio de WhatsApp...");
     inicializarWhatsApp(io);
 
@@ -54,36 +54,16 @@ Sequelize.sync()
     console.error("❌ [Database] Error al sincronizar la base de datos:", error);
   });
 
-/**
- * Normalize a port into a number, string, or false.
- */
 function normalizePort(val) {
   var port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
-
-  if (port >= 0) {
-    // port number
-    return port;
-  }
-
+  if (isNaN(port)) return val;
+  if (port >= 0) return port;
   return false;
 }
 
-/**
- * Event listener for HTTP server "error" event.
- */
 function onError(error) {
-  if (error.syscall !== "listen") {
-    throw error;
-  }
-
+  if (error.syscall !== "listen") throw error;
   var bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-
-  // handle specific listen errors with friendly messages
   switch (error.code) {
     case "EACCES":
       console.error(bind + " requiere privilegios elevados.");
@@ -98,9 +78,6 @@ function onError(error) {
   }
 }
 
-/**
- * Event listener for HTTP server "listening" event.
- */
 function onListening() {
   var addr = server.address();
   var bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
