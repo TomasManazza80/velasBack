@@ -1,85 +1,91 @@
+// app.js
 var dotenv = require('dotenv');
 dotenv.config();
 
-var createError = require("http-errors");
 var express = require("express");
 var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
 var cors = require("cors");
 var http = require("http");
+var logger = require("morgan");
+var cookieParser = require("cookie-parser");
+var createError = require("http-errors");
 var { Server } = require("socket.io");
+var vexor = require("vexor");
+const { Vexor } = vexor;
 
+// Importación de lógica externa
 const { inicializarWhatsApp } = require('./main'); 
 
+// Rutas
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 var productRouter = require("./routes/product");
 var paymentRouter = require("./routes/paymentRoutes");
-var enviarPedidoWhatsappRoutes = require('./routes/enviarPedidoWhatsappRoutes');
-const productBought = require("./routes/productBoughtRoute");
+var productBought = require("./routes/productBoughtRoute");
 var recaudationRouter = require("./routes/recaudationRoutes");
+var enviarPedidoWhatsappRoutes = require('./routes/enviarPedidoWhatsappRoutes');
 
+var fronturl = process.env.FRONT_URL || 'http://localhost:5173';
 var app = express();
-var fronturl = "https://lupetruccelli.com";
 
-// --- MIDDLEWARES ---
+// Configuración de Vexor
+const vexorInstance = new Vexor({
+  publishableKey: process.env.VEXOR_PUBLISHABLE_KEY,
+  projectId: process.env.VEXOR_PROJECT_ID,
+  apiKey: process.env.VEXOR_API_KEY,
+});
+
+// Configuración de motor de plantillas (Pug)
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'pug');
+
+// Middleware
 app.use(logger("dev"));
-// Configuramos CORS de la App igual que el de Sockets
-app.use(cors({
-    origin: fronturl,
-    credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- CONFIGURACIÓN DE SERVIDOR HTTP Y SOCKETS ---
+// Configuración de Servidor HTTP y Sockets
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: fronturl,
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  transports: ['websocket', 'polling'] // Permitimos ambos pero priorizamos websocket
+    methods: ["GET", "POST"]
+  }
 });
 
+// Iniciamos WhatsApp pasando el objeto 'io'
 inicializarWhatsApp(io);
 
-// --- RUTAS ---
-app.use('/', indexRouter);
-app.use('/', usersRouter);
-app.use('/', productRouter);
-app.use('/payment', paymentRouter);
-app.use('/boughtProduct', productBought);
-app.use('/recaudation', recaudationRouter);
+// Registro de Rutas de la API
+app.use(`/`, indexRouter);
+app.use(`/`, usersRouter);
+app.use(`/`, productRouter);
+app.use(`/payment`, paymentRouter);
+app.use(`/boughtProduct`, productBought);
+app.use(`/recaudation`, recaudationRouter);
 app.use('/enviarPedidoWhatsapp', enviarPedidoWhatsappRoutes);
 
-// Catch 404
+// Manejo de error 404
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// Error handler
+// Manejador de errores global
 app.use(function (err, req, res, next) {
+  res.locals.message = err.message;
+  res.locals.error = req.app.get("env") === "development" ? err : {};
+
   res.status(err.status || 500);
-  res.json({ error: err.message }); // En APIs es mejor responder JSON que renderizar PUG
+  res.render("error");
 });
 
-// --- LANZAMIENTO (CORREGIDO PARA RENDER) ---
-// Cambia esto:
-// const PORT = 3001; 
 
-// Por esto:
-// --- LANZAMIENTO (CORREGIDO PARA RENDER) ---
-// Usa process.env.PORT para que Render asigne el puerto correcto dinámicamente
-const PORT = process.env.PORT || 3001; 
-
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
-  console.log(`🔗 Frontend permitido: ${fronturl}`);
+  console.log(`🚀 Servidor en puerto ${PORT}`);
 });
 
 module.exports = app;
