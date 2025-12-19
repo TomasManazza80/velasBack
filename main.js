@@ -58,24 +58,27 @@ const inicializarWhatsApp = (io) => {
 
     // --- EVENTOS DEL CLIENTE DE WHATSAPP ---
 
-    client.on('qr', (qr) => {
-        ultimoQR = qr; // Guardar en memoria
-        qrAttempts++;
-        
-        if (qrAttempts > MAX_QR_ATTEMPTS) {
-            console.error('⚠️ [WhatsApp] Máximo de intentos QR alcanzado.');
-            io.emit('whatsapp-status', 'timeout');
-            return;
+  client.on('qr', async (qr) => {
+    qrAttempts++;
+    
+    // Si ya intentó 2 veces, destruimos el cliente para que deje de pedir status
+    if (qrAttempts > 2) { 
+        console.error('⚠️ [WhatsApp] Límite de 2 intentos alcanzado. Deteniendo...');
+        ultimoQR = null;
+        io.emit('whatsapp-status', 'timeout'); // Avisa al frontend que se rinda
+        try {
+            await client.destroy(); // Mata el proceso de Puppeteer
+        } catch (e) {
+            console.log("Error al detener cliente excedido");
         }
+        return; 
+    }
 
-        console.log(`📲 [WhatsApp] QR Generado (${qrAttempts}/${MAX_QR_ATTEMPTS})`);
-        
-        // Mostrar en la consola del servidor (Local)
-        qrcodeTerminal.generate(qr, { small: true });
-        
-        // Enviar al componente de React (Frontend)
-        io.emit('whatsapp-qr', qr);
-    });
+    ultimoQR = qr; 
+    console.log(`📲 [WhatsApp] QR Generado (${qrAttempts}/2)`);
+    qrcodeTerminal.generate(qr, { small: true });
+    io.emit('whatsapp-qr', qr);
+});
 
     client.on('ready', () => {
         qrAttempts = 0; 
