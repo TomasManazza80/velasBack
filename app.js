@@ -73,8 +73,11 @@ app.use(function (err, req, res, next) {
 // const PORT = 3001; 
 
 // Por esto:
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+// --- LANZAMIENTO (CORREGIDO PARA RENDER) ---
+// Usa process.env.PORT para que Render asigne el puerto correcto dinámicamente
+const PORT = process.env.PORT || 3001; 
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
   console.log(`🔗 Frontend permitido: ${fronturl}`);
 });
