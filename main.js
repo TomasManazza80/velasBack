@@ -9,6 +9,7 @@ const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
+        executablePath: '/usr/bin/google-chrome-stable', // RUTA CRÍTICA PARA RENDER
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
