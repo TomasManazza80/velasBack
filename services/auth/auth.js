@@ -40,7 +40,7 @@ async function createToken(userData) {
     const payload = {
       email: userData.email,
       userId: userData.id, // Mejor usar ID que datos sensibles
-      rol: userData.rol
+      role: userData.role
       // Evita incluir: password, información personal sensible
     };
 
@@ -68,9 +68,9 @@ async function verifyToken(token) {
   }
 }
 
-module.exports = { 
-  authHash, 
-  createToken, 
+module.exports = {
+  authHash,
+  createToken,
   compareHash,
   verifyToken // Exportamos la nueva función
 };

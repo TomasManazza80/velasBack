@@ -1,76 +1,126 @@
-var dotenv = require('dotenv');
+// BACK/app.js (versión ES Modules - Exporta 'app')
+
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import createError from 'http-errors';
+import express from 'express';
+import path from 'path';
+import cookieParser from 'cookie-parser';
+import logger from 'morgan';
+import cors from 'cors';
+
+// Rutas
+import indexRouter from './routes/index.js';
+import usersRouter from './routes/users.js';
+import productRouter from './routes/product.js';
+import reparacionesRouter from './routes/encargosRoutes.js';
+import paymentRouter from './routes/paymentRoutes.js';
+import productBought from './routes/productBoughtRoute.js';
+import recaudationRouter from './routes/recaudationRoutes.js';
+import pagoCaja from './routes/pagoCajaRoutes.js';
+import recaudacionFinalRouter from './routes/recaudacionFinalRoutes.js';
+import balanceMensualRouter from './routes/balance/balanceMensualRoutes.js';
+import egresosRouter from './routes/balance/egresosRoutes.js';
+import balancePersonalRouter from './routes/balance/balancePersonalRoutes.js';
+import gastosMensualesRouter from './routes/balance/gastosMensualesRoutes.js';
+import deudaPersonalRouter from './routes/balance/deudaPersonalRoutes.js';
+import contenidoRouter from './routes/cargaDeContenidoRoutes/contenidoRoutes.js';
+import devolucionProductosRouter from './routes/devolucionProductos/devolucionProductosRoutes.js';
+import remitoRouter from './routes/remito/remitoRoutes.js';
+import gastosRouter from './routes/gastosRoutes.js';
+import qrRouter from './routes/QRroutes/qrRoutes.js';
+import ventasEcommerceRouter from './routes/ventasEcommerce/ventasEcommerceRoutes.js';
+import reportRouter from './routes/reportRoutes.js';
+import clientRouter from './routes/clientRoutes.js';
+import imagekitRouter from './routes/imagekitRoutes.js';
+import categoryRouter from './routes/categoryRoutes.js';
+import providerRouter from './routes/providerRoutes.js';
+import successCasesRouter from './routes/successCase/successCaseRoutes.js';
+import heroSliderRouter from './routes/heroSlider/heroSliderRoutes.js';
+
+// Vexor: CORRECCIÓN FINAL DE IMPORTACIÓN
+// Esto resuelve: TypeError: Vexor is not a constructor
+import vexorModule from 'vexor';
+
+// La clase Vexor se extrae con una lógica de respaldo: 
+// 1. Intentamos acceder a .Vexor (como en el ejemplo CommonJS) 
+// 2. Si no es .Vexor, asumimos que la clase es la exportación por defecto (vexorModule).
+const Vexor = vexorModule.Vexor || vexorModule.default || vexorModule;
+
 dotenv.config();
 
-var express = require("express");
-var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
-var cors = require("cors");
-var createError = require("http-errors");
+// Para ES Modules, esta es la forma correcta de obtener __dirname
+const __filename = fileURLToPath(import.meta.url);
+// Para ES Modules (equivalente a __dirname)
+// Nota: path.dirname(new URL(import.meta.url).pathname) requiere el protocolo 'file://'
+const __dirname = path.dirname(__filename);
 
-// --- IMPORTACIÓN DE RUTAS ---
-var indexRouter = require("./routes/index");
-var usersRouter = require("./routes/users");
-var productRouter = require("./routes/product");
-var paymentRouter = require("./routes/paymentRoutes");
-var productBought = require("./routes/productBoughtRoute");
-var recaudationRouter = require("./routes/recaudationRoutes");
-var enviarProductosWhatsappRoutes = require('./routes/enviarPedidoWhatsappRoutes');
-var qrRoutes = require('./routes/qrRoutes');
+const app = express();
 
-// --- IMPORTACIÓN DEL SERVICIO DE WHATSAPP ---
-// Importamos el servicio para poder inicializarlo
-const qrService = require('./services/qrService'); 
-
-var app = express();
-
-// --- INICIALIZACIÓN DE WHATSAPP ---
-// Esta línea es la que dispara el navegador Puppeteer y genera el QR
-qrService.init(); 
-
-// --- CONFIGURACIÓN DE VEXOR (Opcional si usas el SDK) ---
-const vexor = require("vexor");
-const { Vexor } = vexor;
+// Instancia Vexor
 const vexorInstance = new Vexor({
-  publishableKey: process.env.VEXOR_PUBLISHABLE_KEY,
-  projectId: process.env.VEXOR_PROJECT_ID,
-  apiKey: process.env.VEXOR_API_KEY,
+    publishableKey: process.env.VEXOR_PUBLISHABLE_KEY,
+    projectId: process.env.VEXOR_PROJECT_ID,
+    apiKey: process.env.VEXOR_API_KEY,
 });
 
-// Configuración de vistas
+// Settings
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
-// --- MIDDLEWARES ---
-app.use(cors()); // Permitir peticiones desde el frontend (React)
-app.use(logger("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Middlewares
+app.use(logger('dev'));
+// Se reduce el límite global a un valor más seguro.
+// Rutas específicas que necesiten más (ej. carga de archivos) deben manejarlo individualmente.
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: false, limit: '5mb' }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors());
+app.use('/egresos', egresosRouter);
+// Rutas
+console.log("SERVER_INIT: Registering middleares and routes...");
+app.use('/', indexRouter);
+app.use('/', usersRouter);
+app.use('/', productRouter);
+app.use('/ecommerce', ventasEcommerceRouter);
+app.use('/payment', paymentRouter);
+app.use('/boughtProduct', productBought);
+app.use('/recaudation', recaudationRouter);
+app.use('/encargos', reparacionesRouter);
+app.use('/pagoCaja', pagoCaja);
+app.use('/recaudacionFinal', recaudacionFinalRouter);
+app.use('/balanceMensual', balanceMensualRouter);
+app.use('/balancePersonal', balancePersonalRouter);
+app.use('/gastosMensuales', gastosMensualesRouter);
+app.use('/deudaPersonal', deudaPersonalRouter);
+app.use('/contenido', contenidoRouter);
+app.use('/devolucionProductos', devolucionProductosRouter);
+app.use('/remito', remitoRouter);
+app.use('/gastos', gastosRouter);
+app.use('/qr', qrRouter);
+app.use('/reports', reportRouter);
+app.use('/api/auth/imagekit', imagekitRouter);
+app.use('/', clientRouter);
+app.use('/api/categories', categoryRouter);
+app.use('/', providerRouter);
 
-// --- RUTAS DE LA API ---
-app.use(`/`, indexRouter);
-app.use(`/`, usersRouter);
-app.use(`/`, productRouter);
-app.use(`/payment`, paymentRouter);
-app.use(`/boughtProduct`, productBought);
-app.use(`/recaudation`, recaudationRouter);
-app.use('/enviarPedidoWhatsapp', enviarProductosWhatsappRoutes);
+app.use('/success-cases', successCasesRouter);
+app.use('/api/hero-slider', heroSliderRouter);
 
-// Esta ruta manejará /qr/status y /qr/restart
-app.use('/qr', qrRoutes); 
-
-// --- MANEJO DE ERRORES ---
-app.use(function (req, res, next) {
-  next(createError(404));
+// Catch 404
+app.use((req, res, next) => {
+    next(createError(404));
 });
 
-app.use(function (err, req, res, next) {
-  res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
-  res.status(err.status || 500);
-  res.render("error");
+// Error handler
+app.use((err, req, res, next) => {
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+    res.status(err.status || 500);
+    res.render('error');
 });
 
-module.exports = app;
+// Exporta la aplicación para que el script 'www.js' pueda importarla y arrancar el servidor.
+export default app;

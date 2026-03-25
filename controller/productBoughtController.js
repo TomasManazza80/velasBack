@@ -9,10 +9,11 @@ const ProductController = {
       res.status(500).json({ message: 'Error al crear producto' });
     }
   },
-  
+
   async getProducts(req, res) {
     try {
-      const products = await ProductBoughtService.getAllBoughtProducts();
+      const { startDate, endDate } = req.query;
+      const products = await ProductBoughtService.getAllBoughtProducts(startDate, endDate);
       res.status(200).json(products);
     } catch (error) {
       console.error('Error al obtener productos:', error);
@@ -31,16 +32,16 @@ const ProductController = {
   },
 
 
-async deleteBoughtProduct(req, res) {
-  console.log("esta es el id***********",req.params);
-  try {
-    const  {id} = req.params; // obtiene el ID del producto desde la ruta
-    await ProductBoughtService.deleteProduct(id); // llama al servicio para eliminar el producto
-    res.status(204).json({ message: 'Producto eliminado con éxito' });
-  } catch (error) {
-    console.error('Error al eliminar producto:', error);
+  async deleteBoughtProduct(req, res) {
+    console.log("esta es el id***********", req.params);
+    try {
+      const { id } = req.params; // obtiene el ID del producto desde la ruta
+      await ProductBoughtService.deleteProduct(id); // llama al servicio para eliminar el producto
+      res.status(204).json({ message: 'Producto eliminado con éxito' });
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+    }
   }
-}
 };
 
 module.exports = ProductController;

@@ -1,13 +1,16 @@
 const mercadopago = require('mercadopago');
 const productService = require('../services/productService');
-console.log(productService);
 
-const createPreference = async (createPaymentDto, id) => {
-  const client = {
-    access_token: 'APP_USR-8101026874292077-101721-08438cf8d2ed21fe5947641f4ae99cd8-2015493826',
-  };
-
-  mercadopago.configure(client);
+// CONFIGURACIÓN DE ACCESO
+const ACCESS_TOKEN = 'APP_USR-2648142854934849-012012-5a948aed8f1967e68d8e41e4a5120c2b-632503296';
+const FONT_URL = process.env.FONT_URL;
+/**
+ * CREA UNA PREFERENCIA DIRECTA EN MERCADO PAGO (OPCIONAL SI NO USAS VEXOR)
+ */
+const createPreference = async (createPaymentDto, orderId) => {
+  mercadopago.configure({
+    access_token: ACCESS_TOKEN,
+  });
 
   const preferenceData = {
     items: [
@@ -19,70 +22,80 @@ const createPreference = async (createPaymentDto, id) => {
       },
     ],
     back_urls: {
-      success: 'https://ecommerceback-haed.onrender.com/confirmacionPago',
-      failure: 'http://localhost:5173/user/allcredits',
-      pending: 'http://localhost:5173/user/allcredits',
+      success: FONT_URL + '/pagoExitoso',
+      failure: FONT_URL + '/pago-fallido',
+      pending: FONT_URL + '/pago-pendiente',
     },
     auto_return: 'approved',
-    external_reference: id,
+    external_reference: String(orderId),
   };
 
   try {
-    const preference = await mercadopago.preferences.create(preferenceData);
-    return preference.body;
+    const response = await mercadopago.preferences.create(preferenceData);
+    return response.body;
   } catch (error) {
+    console.error('[MP_SERVICE_ERROR]:', error);
     throw error;
   }
 };
 
+/**
+ * PROCESA EL WEBHOOK PARA DESCONTAR STOCK (VERSION LEGACY)
+ */
 const processWebhookData = async (webhookData) => {
-  if (webhookData.data.product) {
-    const productId = webhookData.data.product.id;
-    const quantity = webhookData.data.product.quantity;
-    await productService.updateQuantityProduct(productId, quantity);
+  if (webhookData?.data?.product) {
+    const { id, quantity, color, almacenamiento, storage } = webhookData.data.product;
+    return await productService.updateQuantityProduct(id, {
+      quantityToDiscount: quantity,
+      color,
+      almacenamiento: almacenamiento || storage
+    });
   } else {
-    console.error('No se encontró información de producto en el webhook');
+    console.warn('DATOS_INSUFICIENTES: El webhook no contiene info de producto');
   }
 };
 
-const success = async (webhookData) => {
+/**
+ * ENVÍA NOTIFICACIÓN DE ÉXITO A URL EXTERNA
+ */
+const notifySuccess = async (webhookData) => {
   const url = 'https://indumentarianam.netlify.app/';
-  const data = {
-    id: webhookData.id,
-    type: webhookData.type,
-    entity: webhookData.entity,
-    action: webhookData.action,
-    date: webhookData.date,
-    model_version: webhookData.model_version,
-    version: webhookData.version,
-    data: {
-      id: webhookData.data.id,
-      status: webhookData.data.status,
-      amount: webhookData.data.amount,
-      payment_method_id: webhookData.data.payment_method_id,
-      payer: {
-        id: webhookData.data.payer.id,
-        name: webhookData.data.payer.name,
-        email: webhookData.data.payer.email
-      },
-      product: {
-        id: webhookData.data.product.id,
-        name: webhookData.data.product.name,
-        quantity: webhookData.data.product.quantity
-      }
-    }
-  };
 
   try {
-    const response = await axios.post(url, data);
-    console.log('Pago exitoso. Respuesta:', response.data);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: webhookData.id,
+        status: webhookData.data?.status,
+        amount: webhookData.data?.amount,
+        product: webhookData.data?.product
+      })
+    });
+    console.log('[NOTIFICACION_EXTERNA] Enviada con éxito');
+    return await response.json();
   } catch (error) {
-    console.error('Error al enviar pago exitoso:', error);
+    console.error('[ERROR_NOTIFICACION_EXTERNA]:', error.message);
+  }
+};
+
+/**
+ * OBTIENE EL ESTADO DEL PAGO DIRECTAMENTE DE MERCADO PAGO
+ */
+const getPaymentById = async (id) => {
+  mercadopago.configure({ access_token: ACCESS_TOKEN });
+  try {
+    const response = await mercadopago.payment.get(id);
+    return response.body;
+  } catch (error) {
+    console.error('[MP_SERVICE_ERROR] getPaymentById:', error);
+    return null;
   }
 };
 
 module.exports = {
   createPreference,
   processWebhookData,
-  success
+  notifySuccess,
+  getPaymentById
 };

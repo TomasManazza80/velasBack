@@ -1,25 +1,18 @@
 require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
-// Determinar si estamos en un entorno local o remoto
-const isLocal = process.env.DB_HOST === 'localhost' || 
-                process.env.DB_HOST === '127.0.0.1';
+const isLocal = process.env.DB_HOST === 'localhost' ||
+  process.env.DB_HOST === '127.0.0.1';
 
-// Configuración adaptable para diferentes entornos
 const sequelizeConfig = {
-  database: process.env.DB_NAME || process.env.DB_DATABASE, // Agregué DB_DATABASE como alternativa
+  database: process.env.DB_NAME || process.env.DB_DATABASE,
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   dialect: 'postgres',
   logging: msg => console.log(msg),
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  },
+  pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
   retry: {
     max: 5,
     match: [
@@ -31,79 +24,49 @@ const sequelizeConfig = {
   }
 };
 
-// Añadir configuración SSL solo para entornos no locales
 if (!isLocal) {
   sequelizeConfig.dialectOptions = {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    },
+    ssl: { require: true, rejectUnauthorized: false },
     keepAlive: true,
     statement_timeout: 10000,
     connectionTimeoutMillis: 10000
   };
 }
 
-// 🔥 CORRECCIÓN IMPORTANTE: No uses process.env.DATABASE_URL OR sequelizeConfig
-// En su lugar, crea la instancia basada en si tenemos DATABASE_URL o no
 let sequelize;
 
 if (process.env.DATABASE_URL) {
-  // Si tenemos DATABASE_URL, úsala pero fusiona con nuestra configuración SSL
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     logging: msg => console.log(msg),
     dialectOptions: !isLocal ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      },
+      ssl: { require: true, rejectUnauthorized: false },
       keepAlive: true,
       statement_timeout: 10000,
       connectionTimeoutMillis: 10000
     } : {},
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
+    pool: { max: 5, min: 0, acquire: 30000, idle: 10000 }
   });
 } else {
-  // Si no hay DATABASE_URL, usa la configuración individual
   sequelize = new Sequelize(sequelizeConfig);
 }
 
-// Verificación mejorada de conexión con mensajes específicos por entorno
+// --- PROTOCOLO DE SINCRONIZACIÓN LuPetruccelli.com ---
 (async () => {
   try {
     await sequelize.authenticate();
     console.log(`✅ Conexión exitosa a PostgreSQL (${isLocal ? 'Local' : 'Remoto'})`);
-    
+
+    // 🔥 ESTA LÍNEA REPARA EL ERROR DE LAS COLUMNAS FALTANTES
+    // Detecta que falta 'proveedorOrigen', 'fechaActualizacion', etc., y las crea.
+    await sequelize.sync({ alter: true });
+    console.log('✨ Base de datos sincronizada: Columnas actualizadas correctamente.');
+
     const [result] = await sequelize.query('SELECT version() as postgres_version');
     console.log(`🔍 Versión de PostgreSQL: ${result[0].postgres_version}`);
-    console.log(`🔧 Modo SSL: ${!isLocal ? 'ACTIVADO' : 'DESACTIVADO'}`);
   } catch (error) {
-    console.error('❌ Error de conexión:');
+    console.error('❌ Error de conexión o sincronización:');
     console.error(error.original?.message || error.message);
-    
-    console.error('\n🔍 Pasos para solucionar:');
-    if (isLocal) {
-      console.error('1. Verifica que PostgreSQL esté corriendo localmente:');
-      console.error('   sudo service postgresql status');
-      console.error('2. Prueba conectarte manualmente con:');
-      console.error(`   psql -h ${process.env.DB_HOST} -U ${process.env.DB_USER} -d ${process.env.DB_NAME}`);
-    } else {
-      console.error('1. Verifica EN RENDER/AWS que:');
-      console.error('   - La base de datos está ACTIVA (no pausada)');
-      console.error('   - Las credenciales coinciden EXACTAMENTE');
-      console.error('2. Prueba conectarte manualmente con:');
-      console.error(`   psql "${process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`}"`);
-    }
-    
-    console.error('\n💡 Consejo adicional:');
-    console.error('   - Para desarrollo local, asegúrate de que tu .env tenga DB_HOST=localhost');
-    console.error('   - Para producción, verifica que DATABASE_URL esté correctamente configurada');
   }
 })();
 

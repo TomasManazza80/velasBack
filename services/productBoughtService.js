@@ -1,4 +1,5 @@
 const { model } = require("../models/index");
+const { Op } = require("sequelize");
 
 const productServiceBought = {
 
@@ -23,10 +24,18 @@ const productServiceBought = {
     }
   },
 
-  async getAllBoughtProducts() {
+  async getAllBoughtProducts(startDate, endDate) {
     try {
+      const where = {};
+      if (startDate && endDate) {
+        const inicio = new Date(startDate);
+        const fin = new Date(endDate);
+        fin.setHours(23, 59, 59, 999);
+        where.fechaCompra = { [Op.between]: [inicio, fin] };
+      }
       const productsBought = await model.ProductBought.findAll({
-        include: [{ model: model.product }]
+        where,
+        order: [['fechaCompra', 'DESC']]
       });
       return productsBought;
     } catch (error) {
@@ -84,7 +93,7 @@ const productServiceBought = {
       throw error;
     }
   },
-  
+
   async deleteProduct(id) {
     try {
       const productBought = await model.ProductBought.findByPk(id);
@@ -99,6 +108,6 @@ const productServiceBought = {
   }
 
 };
- 
+
 
 module.exports = productServiceBought;

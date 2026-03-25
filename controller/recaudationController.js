@@ -7,7 +7,11 @@ const createRecaudationController = async (req, res) => {
     res.status(201).json(newRecaudation);
   } catch (error) {
     console.error("Error al crear recaudation:", error);
-    res.status(500).json({ message: "Error al crear recaudation" });
+    res.status(400).json({
+      message: "Error al crear recaudation",
+      error: error.message,
+      details: error.errors ? error.errors.map(e => e.message) : null
+    });
   }
 };
 

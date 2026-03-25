@@ -6,6 +6,7 @@ const createUser = Joi.object().keys({
   number: Joi.string().required(),
   email: Joi.string().email().required(),
   password: Joi.string().required(),
+  recaptchaToken: Joi.string().required()
 });
 
 const fatchUser = Joi.object().keys({
@@ -19,7 +20,11 @@ const updateUser = Joi.object().keys({
   number: Joi.string().required(),
   email: Joi.string().email().required(),
   password: Joi.string().required(),
-  role: Joi.string().valid('admin', 'user', 'guest').required()
+  role: Joi.string().valid('admin', 'user', 'guest', 'tecnico', 'vendedor').required()
+});
+
+const updateUserRole = Joi.object().keys({
+  role: Joi.string().valid('admin', 'user', 'guest', 'tecnico', 'vendedor').required()
 });
 
 const createProduct = Joi.object().keys({
@@ -40,4 +45,4 @@ const validateProduct = async (data) => {
   return { error: result.error };
 };
 
-module.exports = { createUser, fatchUser, updateUser, validateProduct };
+module.exports = { createUser, fatchUser, updateUser, validateProduct, updateUserRole };
