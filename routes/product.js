@@ -7,6 +7,7 @@ router.post('/products', productController.createProduct);
 
 router.get('/products', productController.getAllProducts);
 router.get('/products/:id', productController.getProductById);
+router.patch('/products/:id/like', productController.toggleLike);
 router.put('/products/:id', productController.updateProduct);
 router.put('/products/update-quantity/:id', productController.updateQuantityProduct);
 router.delete('/products/:id', productController.deleteProduct);

@@ -73,6 +73,16 @@ const productController = {
       }
       res.status(500).json({ message: 'Error al eliminar', error: error.message });
     }
+  },
+
+  async toggleLike(req, res) {
+    try {
+      const { isIncrement } = req.body;
+      const updatedProduct = await productService.toggleLike(req.params.id, isIncrement);
+      res.status(200).json(updatedProduct);
+    } catch (error) {
+      res.status(500).json({ message: 'Error al actualizar likes', error: error.message });
+    }
   }
 };
 

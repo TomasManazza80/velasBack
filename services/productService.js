@@ -221,6 +221,17 @@ const productService = {
 
         return await item.destroy();
     },
+
+    async toggleLike(productId, isIncrement) {
+        const item = await product.findByPk(productId);
+        if (!item) throw new Error('Producto no encontrado');
+
+        const currentLikes = Number(item.likes) || 0;
+        const newLikes = isIncrement ? currentLikes + 1 : Math.max(0, currentLikes - 1);
+
+        item.likes = newLikes;
+        return await item.save();
+    },
 };
 
 module.exports = productService;

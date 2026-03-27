@@ -80,6 +80,10 @@ const Product = Sequelize.define("product", {
       }
       return rawValue || [];
     }
+  },
+  likes: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
   }
 }, {
   timestamps: true,
