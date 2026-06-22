@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "13": "^0.0.0",
+    "@google/generative-ai": "^0.24.1",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "bcrypt": "^5.0.1",
     "cookie-parser": "~1.4.4",

@@ -37,6 +37,7 @@ import categoryRouter from './routes/categoryRoutes.js';
 import providerRouter from './routes/providerRoutes.js';
 import successCasesRouter from './routes/successCase/successCaseRoutes.js';
 import heroSliderRouter from './routes/heroSlider/heroSliderRoutes.js';
+import pronunciationRouter from './routes/pronunciationRoutes.js';
 
 // Vexor: CORRECCIÓN FINAL DE IMPORTACIÓN
 // Esto resuelve: TypeError: Vexor is not a constructor
@@ -107,6 +108,7 @@ app.use('/', providerRouter);
 
 app.use('/success-cases', successCasesRouter);
 app.use('/api/hero-slider', heroSliderRouter);
+app.use('/api/pronunciation', pronunciationRouter);
 
 // Catch 404
 app.use((req, res, next) => {
