@@ -177,10 +177,14 @@ const updateUserRole = async (id, role) => {
       return "NOT FOUND!";
     } else {
       console.log(`ROLE UPDATED SUCCESSFULLY FOR USER ${id} TO ${role}`);
-      return { message: "Role updated successfully", role: role };
-    }
+const deleteUser = async (id) => {
+  try {
+    const deletedRows = await model.user.destroy({
+      where: { id: id }
+    });
+    return deletedRows > 0;
   } catch (error) {
-    console.log("ERROR IN updateUserRole SERVICE:", error);
+    console.log("ERROR IN deleteUser SERVICE:", error);
     throw error;
   }
 };

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "npx kill-port 3000",
-    "start": "nodemon ./bin/www"
+    "start": "nodemon --ignore 'auth_info_baileys/**' --ignore 'baileys_session/**' ./bin/www"
   },
   "dependencies": {
     "13": "^0.0.0",
@@ -40,7 +40,10 @@
   },
   "nodemonConfig": {
     "ignore": [
-      "auth_info_baileys/*"
+      "auth_info_baileys/*",
+      "auth_info_baileys",
+      "baileys_session/*",
+      "baileys_session"
     ]
   }
 }

@@ -28,6 +28,11 @@ const Product = Sequelize.define("product", {
   alerta: {
     type: DataTypes.INTEGER,
   },
+  descuento: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+  },
   aplicarMayoristaPorCantidad: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
@@ -82,6 +87,18 @@ const Product = Sequelize.define("product", {
     }
   },
   likes: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  tendenciaStars: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 5
+    }
+  },
+  customOrder: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   }

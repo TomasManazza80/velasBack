@@ -25,6 +25,8 @@ const Category = require("./categories/categ");
 const Responsable = require("../models/balance/responsablesModel");
 const SuccessCase = require("../models/successCase/SuccessCase.js");
 const HeroSlider = require("../models/heroSlider/HeroSlider.js");
+const FooterContent = require("../models/footer/FooterContent.js");
+const Combo = require("../models/combos/Combo.js");
 
 
 const Dispatch = require("../models/ventasEcommerce/ventasEcommerce");
@@ -97,5 +99,7 @@ module.exports = {
   Responsable,
   Client,
   SuccessCase,
-  HeroSlider
+  HeroSlider,
+  FooterContent,
+  Combo
 };

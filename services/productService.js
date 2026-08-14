@@ -30,6 +30,7 @@ const normalizarProducto = (data) => {
 
     // Actualizamos las variantes en el objeto data
     data.variantes = variantes;
+    data.descuento = Number(data.descuento) || 0;
 
     // Eliminamos propiedades planas para evitar errores en Sequelize (ya que se borraron del modelo)
     delete data.cantidad;
@@ -63,7 +64,14 @@ const productService = {
     },
 
     async getAllProducts(limit, page, search) {
-        const options = {};
+        const options = {
+            order: [
+                ['tendenciaStars', 'DESC'],
+                ['customOrder', 'ASC'],
+                ['likes', 'DESC'], 
+                ['id', 'DESC']
+            ]
+        };
 
         if (search) {
             const words = search.split(/\s+/).filter(w => w.length > 0);
