@@ -27,8 +27,6 @@ const SuccessCase = require("../models/successCase/SuccessCase.js");
 const HeroSlider = require("../models/heroSlider/HeroSlider.js");
 const FooterContent = require("../models/footer/FooterContent.js");
 const Combo = require("../models/combos/Combo.js");
-const PronunciationTask = require("./pronunciationTasks/PronunciationTask.js");
-const StudentAttempt = require("./studentAttempts/StudentAttempt.js");
 
 
 const Dispatch = require("../models/ventasEcommerce/ventasEcommerce");
@@ -67,14 +65,6 @@ cart.belongsToMany(product, {
 product.hasMany(ProductBought, { onDelete: "CASCADE" });
 ProductBought.belongsTo(product, { onDelete: "CASCADE" });
 
-// Relación PronunciationTask - StudentAttempt
-PronunciationTask.hasMany(StudentAttempt, { foreignKey: 'task_id', onDelete: 'CASCADE' });
-StudentAttempt.belongsTo(PronunciationTask, { foreignKey: 'task_id', onDelete: 'CASCADE' });
-
-// Relación Usuario - StudentAttempt
-user.hasMany(StudentAttempt, { foreignKey: 'student_id', onDelete: 'CASCADE' });
-StudentAttempt.belongsTo(user, { foreignKey: 'student_id', onDelete: 'CASCADE' });
-
 // ---------------------------------------------------------------------
 // Exportación Unificada del Sistema
 // ---------------------------------------------------------------------
@@ -111,7 +101,5 @@ module.exports = {
   SuccessCase,
   HeroSlider,
   FooterContent,
-  Combo,
-  PronunciationTask,
-  StudentAttempt
+  Combo
 };
